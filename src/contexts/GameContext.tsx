@@ -1,15 +1,17 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { GameState, Player, Role, GamePhase } from '@/types';
+import { GameState, Player, Role, GamePhase, Movie } from '@/types';
 import { getRandomMovie, Decade, Difficulty } from '@/lib/tmdb';
 
 interface GameContextType extends GameState {
-    startGame: (count: number, filters: { decade: Decade; difficulty: Difficulty }) => Promise<void>;
+    startGame: (count: number, filters: { decade: Decade; difficulty: Difficulty; year?: number }) => Promise<void>;
     nextPlayer: () => void;
     resetGame: () => void;
     isLoading: boolean;
     error: string | null;
+    customPool: Movie[];
+    setCustomPool: (movies: Movie[]) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -24,12 +26,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [customPool, setCustomPool] = useState<Movie[]>([]);
 
-    const startGame = async (count: number, filters: { decade: Decade; difficulty: Difficulty }) => {
+    const startGame = async (count: number, filters: { decade: Decade; difficulty: Difficulty; year?: number }) => {
         setIsLoading(true);
         setError(null);
         try {
-            const movie = await getRandomMovie(filters);
+            let movie: Movie;
+
+            if (customPool.length > 0) {
+                // Pick from custom pool
+                const randomIndex = Math.floor(Math.random() * customPool.length);
+                movie = customPool[randomIndex];
+            } else {
+                // Pick from API
+                movie = await getRandomMovie(filters);
+            }
 
             // Create players
             const newPlayers: Player[] = Array.from({ length: count }, (_, i) => ({
@@ -86,7 +98,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <GameContext.Provider value={{ ...gameState, startGame, nextPlayer, resetGame, isLoading, error }}>
+        <GameContext.Provider value={{ ...gameState, startGame, nextPlayer, resetGame, isLoading, error, customPool, setCustomPool }}>
             {children}
         </GameContext.Provider>
     );
