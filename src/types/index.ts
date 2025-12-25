@@ -12,6 +12,8 @@ export interface Movie {
     genre: string;
     overview: string;
     poster_path: string | null;
+    release_year?: string;
+    keywords?: string[];
 }
 
 export type GamePhase = 'SETUP' | 'LOADING' | 'PASS_DEVICE' | 'REVEAL' | 'PLAYING';

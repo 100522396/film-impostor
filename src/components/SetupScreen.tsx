@@ -1,28 +1,66 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { Users, Play, Filter, ListChecks } from 'lucide-react';
+import { Users, Play, Filter, ListChecks, Calendar, Tag, Info } from 'lucide-react';
 import { Decade, Difficulty } from '@/lib/tmdb';
 import { PoolSelectionScreen } from './PoolSelectionScreen';
 import clsx from 'clsx';
 
 export function SetupScreen() {
     const { startGame, isLoading, error, customPool, setCustomPool } = useGame();
+    // Default values
     const [count, setCount] = useState(4);
     const [decade, setDecade] = useState<Decade>('ALL');
     const [difficulty, setDifficulty] = useState<Difficulty>('TOP_100');
     const [specificYear, setSpecificYear] = useState<string>('');
     const [showPoolSelection, setShowPoolSelection] = useState(false);
+    const [hints, setHints] = useState<string[]>(['GENRE']);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    // Load settings from localStorage on mount
+    useEffect(() => {
+        const savedSettings = localStorage.getItem('film-impostor-settings');
+        if (savedSettings) {
+            try {
+                const parsed = JSON.parse(savedSettings);
+                if (parsed.count) setCount(parsed.count);
+                if (parsed.decade) setDecade(parsed.decade);
+                if (parsed.difficulty) setDifficulty(parsed.difficulty);
+                if (parsed.specificYear) setSpecificYear(parsed.specificYear);
+                if (parsed.hints) setHints(parsed.hints);
+            } catch (e) {
+                console.error('Failed to parse settings', e);
+            }
+        }
+        setIsLoaded(true);
+    }, []);
+
+    // Save settings when they change
+    useEffect(() => {
+        if (!isLoaded) return;
+        const settings = { count, decade, difficulty, specificYear, hints };
+        localStorage.setItem('film-impostor-settings', JSON.stringify(settings));
+    }, [count, decade, difficulty, specificYear, hints, isLoaded]);
+
+    const toggleHint = (hint: string) => {
+        if (hints.includes(hint)) {
+            setHints(hints.filter(h => h !== hint));
+        } else {
+            setHints([...hints, hint]);
+        }
+    };
 
     const handleStart = () => {
         const yearNum = specificYear ? parseInt(specificYear) : undefined;
-        startGame(count, { decade, difficulty, year: yearNum });
+        startGame(count, { decade, difficulty, year: yearNum }, hints);
     };
 
     const hasCustomPool = customPool.length > 0;
+
+    if (!isLoaded) return null; // Prevent hydration mismatch / flickering
 
     if (showPoolSelection) {
         const yearNum = specificYear ? parseInt(specificYear) : undefined;
@@ -142,6 +180,18 @@ export function SetupScreen() {
                             ))}
                         </div>
                     </div>
+
+                    {/* Hints Selector */}
+                    <div className="space-y-2 pt-2 border-t border-gray-700/50">
+                        <span className="text-xs text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <Info className="w-3 h-3" /> Pistas para el impostor
+                        </span>
+                        <div className="flex gap-2">
+                            <HintToggle value="GENRE" label="Género" icon={<Tag className="w-3 h-3" />} selected={hints.includes('GENRE')} toggle={toggleHint} />
+                            <HintToggle value="YEAR" label="Año" icon={<Calendar className="w-3 h-3" />} selected={hints.includes('YEAR')} toggle={toggleHint} />
+                            <HintToggle value="KEYWORDS" label="Keywords" icon={<ListChecks className="w-3 h-3" />} selected={hints.includes('KEYWORDS')} toggle={toggleHint} />
+                        </div>
+                    </div>
                 </div>
 
                 {/* Pool Selection Trigger */}
@@ -183,5 +233,22 @@ export function SetupScreen() {
                 </Button>
             </Card>
         </div>
+    );
+}
+
+function HintToggle({ value, label, icon, selected, toggle }: any) {
+    return (
+        <button
+            onClick={() => toggle(value)}
+            className={clsx(
+                "flex-1 py-2 px-1 rounded-lg text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 border",
+                selected
+                    ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
+                    : 'bg-gray-800 border-gray-700 text-gray-500 hover:bg-gray-750'
+            )}
+        >
+            {icon}
+            {label}
+        </button>
     );
 }

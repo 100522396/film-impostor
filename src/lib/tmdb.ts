@@ -83,6 +83,16 @@ function getBaseParams(filters: FilterOptions): Record<string, string> {
     return baseParams;
 }
 
+async function getMovieKeywords(movieId: number): Promise<string[]> {
+    try {
+        const data = await fetchFromTMDB(`/movie/${movieId}/keywords`);
+        return data.keywords?.slice(0, 5).map((k: any) => k.name) || [];
+    } catch (e) {
+        console.error('Error fetching keywords', e);
+        return [];
+    }
+}
+
 export async function getRandomMovie(filters: FilterOptions): Promise<Movie> {
     const baseParams = getBaseParams(filters);
 
@@ -110,7 +120,12 @@ export async function getRandomMovie(filters: FilterOptions): Promise<Movie> {
     }
 
     const randomMovie = results[Math.floor(Math.random() * results.length)];
-    return mapMovie(randomMovie);
+    const mappedMovie = mapMovie(randomMovie);
+
+    // Enrich with keywords
+    mappedMovie.keywords = await getMovieKeywords(mappedMovie.id);
+
+    return mappedMovie;
 }
 
 export async function getMoviePool(filters: FilterOptions): Promise<Movie[]> {
@@ -129,6 +144,10 @@ export async function getMoviePool(filters: FilterOptions): Promise<Movie[]> {
     const movies = allResults.map(mapMovie);
     const uniqueMovies = Array.from(new Map(movies.map(m => [m.id, m])).values());
 
+    // Note: We don't fetch keywords for the whole pool to avoid API rate limits
+    // We will fetch them lazily or just when the movie is selected if needed, 
+    // but for now let's just leave them optional in the pool.
+
     return uniqueMovies;
 }
 
@@ -141,5 +160,7 @@ function mapMovie(raw: any): Movie {
         genre: genreName,
         overview: raw.overview,
         poster_path: raw.poster_path,
+        release_year: raw.release_date ? raw.release_date.split('-')[0] : '???',
+        keywords: []
     };
 }

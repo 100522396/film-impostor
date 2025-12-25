@@ -5,13 +5,14 @@ import { GameState, Player, Role, GamePhase, Movie } from '@/types';
 import { getRandomMovie, Decade, Difficulty } from '@/lib/tmdb';
 
 interface GameContextType extends GameState {
-    startGame: (count: number, filters: { decade: Decade; difficulty: Difficulty; year?: number }) => Promise<void>;
+    startGame: (count: number, filters: { decade: Decade; difficulty: Difficulty; year?: number }, enabledHints?: string[]) => Promise<void>;
     nextPlayer: () => void;
     resetGame: () => void;
     isLoading: boolean;
     error: string | null;
     customPool: Movie[];
     setCustomPool: (movies: Movie[]) => void;
+    enabledHints: string[];
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -27,10 +28,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [customPool, setCustomPool] = useState<Movie[]>([]);
+    const [enabledHints, setEnabledHints] = useState<string[]>(['GENRE']);
 
-    const startGame = async (count: number, filters: { decade: Decade; difficulty: Difficulty; year?: number }) => {
+    const startGame = async (
+        count: number,
+        filters: { decade: Decade; difficulty: Difficulty; year?: number },
+        hitsConfig: string[] = ['GENRE']
+    ) => {
         setIsLoading(true);
         setError(null);
+        setEnabledHints(hitsConfig);
         try {
             let movie: Movie;
 
@@ -98,7 +105,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <GameContext.Provider value={{ ...gameState, startGame, nextPlayer, resetGame, isLoading, error, customPool, setCustomPool }}>
+        <GameContext.Provider value={{ ...gameState, startGame, nextPlayer, resetGame, isLoading, error, customPool, setCustomPool, enabledHints }}>
             {children}
         </GameContext.Provider>
     );
