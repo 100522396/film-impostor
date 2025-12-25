@@ -79,7 +79,7 @@ export function SetupScreen() {
                     Film Impostor
                 </h1>
                 <p className="text-gray-400">Descubre quién no ha visto la película</p>
-                <p className="text-gray-400">Cano chilea </p>
+                <p className="text-gray-400">Cano y calvito kys </p>
             </div>
 
             <Card className="w-full max-w-md space-y-6">
